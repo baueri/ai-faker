@@ -1,0 +1,19 @@
+{
+    "name": "baueri/ai-faker",
+    "description": "AI-powered faker for generating structured dummy data using LLMs",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Baueri\\AIFaker\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "baueri"
+        }
+    ],
+    "require": {
+        "php": "^8.1"
+    }
+}

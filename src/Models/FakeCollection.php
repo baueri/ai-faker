@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Baueri\AIFaker\Models;
 
+/**
+ * @template-implements \IteratorAggregate<FakeItem>
+ */
 class FakeCollection implements \IteratorAggregate, \Countable
 {
     protected array $items = [];
@@ -14,6 +17,7 @@ class FakeCollection implements \IteratorAggregate, \Countable
             $this->items[] = new FakeItem($item);
         }
     }
+
 
     public function getIterator(): \Traversable
     {

@@ -8,11 +8,11 @@ use Baueri\AIFaker\Contracts\AIProviderInterface;
 
 class OpenAIProvider implements AIProviderInterface
 {
-    protected string $apiKey;
-    protected string $model;
-
-    public function __construct(string $apiKey, string $model = 'gpt-4.1-mini')
-    {
+    public function __construct(
+        protected string $apiKey,
+        protected string $model = 'gpt-4.1-mini',
+        protected int $timeout = 30
+    ) {
         $this->apiKey = $apiKey;
         $this->model = $model;
     }
@@ -25,6 +25,7 @@ class OpenAIProvider implements AIProviderInterface
             CURLOPT_URL => 'https://api.openai.com/v1/responses',
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
+            CURLOPT_TIMEOUT => $this->timeout,
             CURLOPT_HTTPHEADER => [
                 'Authorization: Bearer ' . $this->apiKey,
                 'Content-Type: application/json',

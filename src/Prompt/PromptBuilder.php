@@ -27,16 +27,20 @@ class PromptBuilder
             $lines[] = "Tone: {$state['tone']}.";
         }
 
-        if (!empty($state['constraints'])) {
-            $lines[] = "Constraints:";
-            foreach ($state['constraints'] as $key => $value) {
+        if (!empty($state['context'])) {
+            $lines[] = "context:";
+            foreach ($state['context'] as $key => $value) {
                 $lines[] = "- {$key}: " . (is_array($value) ? implode(', ', $value) : $value);
             }
         }
 
-        $lines[] = "Fields:";
-        foreach ($state['fields'] as $field) {
-            $lines[] = "- {$field}";
+        if (! empty($state['fields'])) {
+            $lines[] = "Fields:";
+            foreach ($state['fields'] as $field) {
+                $lines[] = "- {$field}";
+            }
+        } else {
+            $lines[] = "Each array element is a string.";
         }
 
         $lines[] = "Return ONLY valid JSON array.";

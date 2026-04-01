@@ -5,124 +5,128 @@ declare(strict_types=1);
 namespace Baueri\AIFaker\Generator;
 
 use Baueri\AIFaker\Contracts\AIProviderInterface;
-use Baueri\AIFaker\Prompt\PromptBuilder;
-use Baueri\AIFaker\Parser\ResponseParser;
-use Baueri\AIFaker\Models\FakeCollection;
 use Baueri\AIFaker\Cache\CacheInterface;
-use Baueri\AIFaker\Models\FakeItem;
 
 class Fake
 {
-    protected string $domain;
-    protected array $fields = [];
-    protected array $constraints = [];
-    protected ?string $language = null;
-    protected ?string $tone = null;
-    protected int $count = 1;
+    public function __construct(
+        protected AIProviderInterface $provider,
+        protected ?CacheInterface $cache = null,
+        protected string $domain = '',
+        protected array $fields = [],
+        protected array $context = [],
+        protected ?string $language = null,
+        protected ?string $tone = null,
+        protected int $count = 1,
+        protected int $batch = 0,
+        protected int $maxRetries = 3,
+    ) {}
 
-    protected AIProviderInterface $provider;
-    protected ?CacheInterface $cache = null;
-    protected int $maxRetries = 3;
-
-    public static function for(string $domain): self
+    protected function with(array $overrides): self
     {
-        $i = new self();
-        $i->domain = $domain;
-        return $i;
-    }
-
-    public function provider(AIProviderInterface $p): self
-    {
-        $this->provider = $p;
-        return $this;
-    }
-    public function cache(CacheInterface $c): self
-    {
-        $this->cache = $c;
-        return $this;
-    }
-    public function maxRetries(int $r): self
-    {
-        $this->maxRetries = $r;
-        return $this;
-    }
-    public function fields(array $f): self
-    {
-        $this->fields = $f;
-        return $this;
-    }
-    public function constraints(array $c): self
-    {
-        $this->constraints = $c;
-        return $this;
-    }
-    public function language(string $l): self
-    {
-        $this->language = $l;
-        return $this;
-    }
-    public function tone(string $t): self
-    {
-        $this->tone = $t;
-        return $this;
+        return new self(
+            provider: $overrides['provider'] ?? $this->provider,
+            cache: $overrides['cache'] ?? $this->cache,
+            domain: $overrides['domain'] ?? $this->domain,
+            fields: $overrides['fields'] ?? $this->fields,
+            context: $overrides['context'] ?? $this->context,
+            language: $overrides['language'] ?? $this->language,
+            tone: $overrides['tone'] ?? $this->tone,
+            count: $overrides['count'] ?? $this->count,
+            batch: $overrides['batch'] ?? $this->batch,
+            maxRetries: $overrides['maxRetries'] ?? $this->maxRetries,
+        );
     }
 
-    public function count(int $c): self
+    public function for(string $domain): self
     {
-        if ($c < 1 || $c > 50) throw new \InvalidArgumentException();
-        $this->count = $c;
-        return $this;
+        return $this->with(['domain' => $domain]);
     }
 
-    public function generate(): FakeCollection
+    public function fields(array $fields): self
     {
-        $builder = new PromptBuilder();
-        $parser = new ResponseParser();
-        $agg = new ResultAggregator($this->maxRetries);
+        return $this->with(['fields' => $fields]);
+    }
 
-        $state = [
+    public function context(array $context): self
+    {
+        return $this->with(['context' => $context]);
+    }
+
+    public function language(string $language): self
+    {
+        return $this->with(['language' => $language]);
+    }
+
+    public function tone(string $tone): self
+    {
+        return $this->with(['tone' => $tone]);
+    }
+
+    public function count(int $count): self
+    {
+        if ($count < 1) {
+            throw new \InvalidArgumentException('Count must be >= 1');
+        }
+
+        return $this->with(['count' => $count]);
+    }
+
+    public function batch(int $batch): self
+    {
+        if ($batch < 1) {
+            throw new \InvalidArgumentException('Batch must be >= 1');
+        }
+
+        return $this->with(['batch' => $batch]);
+    }
+
+    public function maxRetries(int $retries): self
+    {
+        return $this->with(['maxRetries' => $retries]);
+    }
+
+    public function cursor(): FakeCursor
+    {
+        if ($this->count < 1) {
+            throw new \Exception('Count must be set');
+        }
+
+        return new FakeCursor(
+            provider: $this->provider,
+            cache: $this->cache,
+            state: $this->buildState(),
+            total: $this->count,
+            batch: $this->batch ?: $this->count,
+            maxRetries: $this->maxRetries
+        );
+    }
+
+    public function generate(): \Baueri\AIFaker\Models\FakeCollection
+    {
+        $cursor = $this->cursor();
+
+        $items = [];
+
+        while ($item = $cursor->fetch()) {
+            if ($item instanceof \Baueri\AIFaker\Models\FakeItem) {
+                $items[] = $item->data;
+            } else {
+                $items[] = $item;
+            }
+        }
+
+        return new \Baueri\AIFaker\Models\FakeCollection($items);
+    }
+
+    protected function buildState(): array
+    {
+        return [
             'domain' => $this->domain,
             'fields' => $this->fields,
-            'constraints' => $this->constraints,
+            'context' => $this->context,
             'language' => $this->language,
             'tone' => $this->tone,
         ];
-
-        $data = $agg->collect($this->count, function ($missing, $existing) use ($builder, $parser, $state) {
-
-            $prompt = $builder->build([
-                ...$state,
-                'count' => $missing,
-                'existing' => $existing,
-            ], !empty($existing));
-
-            $key = md5($prompt);
-
-            if ($this->cache && $cached = $this->cache->get($key)) {
-                return $cached;
-            }
-
-            $raw = $this->provider->generate($prompt);
-
-            try {
-                $parsed = $parser->parse($raw, $state['fields']);
-
-                if ($this->cache) {
-                    $this->cache->set($key, $parsed);
-                }
-
-                return $parsed;
-            } catch (\Exception) {
-                return [];
-            }
-        });
-
-        return new FakeCollection($data);
-    }
-
-    public function generateOne(): FakeItem
-    {
-        return $this->count(1)
-            ->generate()[0] ?? null;
     }
 }

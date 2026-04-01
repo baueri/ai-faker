@@ -2,6 +2,8 @@
 
 AI Faker PHP is a lightweight, provider-agnostic PHP library for generating structured fake data using AI.
 
+> ⚠️ This package was largely generated with the help of AI, including code, structure, and documentation.
+
 ## ✨ Features
 
 - AI-powered fake data generation
@@ -109,3 +111,28 @@ class MyProvider implements AIProviderInterface {
 - AI output is validated but still depends on prompt quality
 - Large datasets may require multiple retries
 - Using cache is highly recommended in development
+
+## 🤝 Contributing
+
+Contributions are welcome!
+
+This project was largely generated with the help of AI, but it is actively maintained and improved by humans.  
+If you find issues, inconsistencies, or have ideas for improvements, feel free to open an issue or submit a pull request.
+
+### Guidelines
+
+- Keep the API simple and consistent
+- Prefer explicit, structured solutions over "magic"
+- Ensure new features don’t break existing behavior
+- Add clear examples when introducing new functionality
+
+### Areas for Improvement
+
+- Additional AI providers (Claude, local models, etc.)
+- More robust schema/type support
+- Additional cache drivers (Redis, memory)
+- Better error handling and edge case coverage
+
+---
+
+Thanks for helping improve the project 🚀

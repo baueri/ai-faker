@@ -23,49 +23,130 @@ AI Faker PHP is a lightweight, provider-agnostic PHP library for generating stru
 composer require baueri/ai-faker
 ```
 
-## 🚀 Usage
+## 🚀 Basic Usage
+
+The package provides a flexible, fluent interface for generating AI-powered fake data. You can generate simple strings, structured data, or full collections with minimal configuration.
+
+### 1. Initialization
+
+Start by creating a provider and (optionally) a cache manager:
 
 ```php
-
-<?php
-
-require __DIR__ . '/../vendor/autoload.php';
-
 use Baueri\AIFaker\Generator\Fake;
 use Baueri\AIFaker\Providers\OpenAIProvider;
 use Baueri\AIFaker\Cache\FileCacheManager;
-use Baueri\AIFaker\Models\FakeItem;
 
-$provider = new OpenAIProvider('YOUR_API_KEY');
+$provider = new OpenAIProvider('your-api-key');
 $cache = new FileCacheManager(__DIR__ . '/cache');
 
-// Basic usage, returns a single item
+$fake = new Fake($provider, $cache);
+```
+### 2. Generate a Single Value
 
-$data = Fake::for('fictive elementary school names')
-    ->provider($provider)
-    ->generateOne();
+Generate a simple string:
 
-// Return multiple items
-$data = Fake::for('fictive elementary school names')
-    ->provider($provider)
+```php
+echo $fake
+    ->for('book title')
+    ->language('en')
+    ->one();
+
+// Add input parameters to influence the output:
+
+echo $fake
+    ->for('book title')
+    ->language('en')
+    ->one(['genre' => 'Sci-fi']);
+```
+
+### 3. Generate Structured Data
+
+Request multiple fields instead of a single string:
+
+```php
+echo $fake
+    ->for('book')
+    ->language('hu')
+    ->fields(['title', 'author', 'description', 'isbn'])
+    ->one();
+```
+
+### 4. Generate Multiple Items
+
+Generate a collection:
+
+```php
+$data = $fake
+    ->for('school names')
     ->count(5)
     ->generate();
 
-// Fully featured usage
+// Use batching to reduce API load:
 
-$data = Fake::for('books')
-    ->provider($provider)
-    ->cache($cache) // cache the result for the prompt to reduce api usage
-    ->fields(['title', 'description']) // generates a list of structured data
-    ->constraints([
-        'genres' => ['sci-fi', 'romantic'],
-        'number_of_sentences' => '10'
-    ]) // add some other context for the prompt
-    ->language('en') // set language
-    ->tone('casual') // set tone (casual, formal, etc)
-    ->count(5) // set the number of items to generate
-    ->maxRetries(3) // set how many times to retry in case the endpoint cannot generate all items in one api call 
+$data = $fake
+    ->for('school names')
+    ->count(10)
+    ->batch(5)
     ->generate();
+```
+
+### 5. Add Context and Constraints
+
+You can guide generation with additional context:
+
+```php
+$data = $fake
+    ->for('movie')
+    ->fields(['title', 'director', 'description', 'genres', 'imdb_rating'])
+    ->context([
+        'description' => ['3-5 paragraphs', '5-8 sentences per paragraph'],
+        'genre_selection' => ['horror', 'sci-fi', 'comedy']
+    ])
+    ->count(10)
+    ->batch(5)
+    ->language('fr')
+    ->generate();
+```
+
+### 6. Streaming with Cursor
+
+Iterate over results lazily:
+
+```php
+$cursor = $fake
+    ->for('fictive brand')
+    ->count(10)
+    ->cursor();
+
+foreach ($cursor as $item) {
+    echo $item . PHP_EOL;
+}
+
+// Or fetch manually:
+
+while ($item = $cursor->fetch()) {
+    echo $item . PHP_EOL;
+}
+
+// You can also pass dynamic input per iteration:
+
+$categories = ['sport', 'jewelry', 'furniture'];
+
+foreach ($categories as $category) {
+    var_dump($cursor->fetch(['category' => $category]));
+}
+```
+
+### 7. Tone Control
+
+Adjust the tone of the generated content:
+
+```php
+echo $fake
+    ->for('letter')
+    ->context(['blackmail', 'two paragraphs'])
+    ->tone('friendly')
+    ->one(['wants 1000 bitcoins']);
 ```
 
 ## 🧠 API
@@ -73,14 +154,16 @@ $data = Fake::for('books')
 ### Core Methods
 - `for(string $domain)`
 - `fields(array $fields)`
-- `constraints(array $constraints)`
+- `context(array $context)`
 - `language(string $lang)`
 - `tone(string $tone)`
 - `count(int $count)`
 - `maxRetries(int $retries)`
 - `cache(CacheInterface $cache)`
 - `provider(AIProviderInterface $provider)`
-- `generate()`
+- `generate($conext)`
+- `one($context)`
+- `cursor()`
 
 ## 🔁 Retry Logic
 

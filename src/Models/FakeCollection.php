@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Baueri\AIFaker\Models;
 
 /**
- * @template-implements \IteratorAggregate<FakeItem>
+ * @template T
+ * @template-implements \IteratorAggregate<T>
  */
 class FakeCollection implements \IteratorAggregate, \Countable
 {
@@ -14,7 +15,7 @@ class FakeCollection implements \IteratorAggregate, \Countable
     public function __construct(array $data)
     {
         foreach ($data as $item) {
-            $this->items[] = new FakeItem($item);
+            $this->items[] = $item;
         }
     }
 
@@ -31,6 +32,6 @@ class FakeCollection implements \IteratorAggregate, \Countable
 
     public function toArray(): array
     {
-        return array_map(fn(FakeItem $i) => $i->data, $this->items);
+        return array_map(fn(array $i) => $i, $this->items);
     }
 }

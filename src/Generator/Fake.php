@@ -102,21 +102,27 @@ class Fake
         );
     }
 
-    public function generate(): \Baueri\AIFaker\Models\FakeCollection
+    public function generate(array|callable $context = []): \Baueri\AIFaker\Models\FakeCollection
     {
         $cursor = $this->cursor();
 
         $items = [];
 
-        while ($item = $cursor->fetch()) {
-            if ($item instanceof \Baueri\AIFaker\Models\FakeItem) {
-                $items[] = $item->data;
-            } else {
-                $items[] = $item;
-            }
+        while ($item = $cursor->fetch($context)) {
+            $items[] = $item;
         }
 
         return new \Baueri\AIFaker\Models\FakeCollection($items);
+    }
+
+    public function one(array|callable $context = []): null|array|string
+    {
+        $cursor = $this
+            ->count(1)
+            ->batch(1)
+            ->cursor();
+
+        return $cursor->fetch($context);
     }
 
     protected function buildState(): array

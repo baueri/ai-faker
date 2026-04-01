@@ -8,14 +8,13 @@ use Baueri\AIFaker\Contracts\AIProviderInterface;
 use Baueri\AIFaker\Cache\CacheInterface;
 use Baueri\AIFaker\Prompt\PromptBuilder;
 use Baueri\AIFaker\Parser\ResponseParser;
-use Baueri\AIFaker\Models\FakeItem;
 
 class FakeCursor implements \Iterator
 {
     protected array $buffer = [];
     protected int $generated = 0;
     protected int $position = 0;
-    protected mixed $current = null;
+    protected null|array $current = null;
 
     protected PromptBuilder $builder;
     protected ResponseParser $parser;
@@ -34,7 +33,7 @@ class FakeCursor implements \Iterator
         $this->aggregator = new ResultAggregator($maxRetries);
     }
 
-    public function fetch(array|callable $extraContext = []): mixed
+    public function fetch(array|callable $extraContext = []): null|array|string
     {
         if ($this->generated >= $this->total) {
             return null;
@@ -51,7 +50,7 @@ class FakeCursor implements \Iterator
         return $this->fetchFromBuffer();
     }
 
-    protected function fetchFromBuffer(): mixed
+    protected function fetchFromBuffer(): null|array|string
     {
         if (empty($this->buffer)) {
             $this->fillBuffer();
@@ -65,12 +64,10 @@ class FakeCursor implements \Iterator
         $item = array_shift($this->buffer);
         $this->generated++;
 
-        return is_array($item)
-            ? new FakeItem($item)
-            : $item;
+        return $item;
     }
 
-    protected function fetchWithContext(array $context): mixed
+    protected function fetchWithContext(array $context): null|array|string
     {
         $this->buffer = [];
 
@@ -111,9 +108,7 @@ class FakeCursor implements \Iterator
 
         $this->generated++;
 
-        return is_array($item)
-            ? new FakeItem($item)
-            : $item;
+        return $item;
     }
 
     protected function fillBuffer(): void
@@ -176,7 +171,7 @@ class FakeCursor implements \Iterator
         $this->current = $this->fetch();
     }
 
-    public function current(): mixed
+    public function current(): null|array|string
     {
         return $this->current;
     }

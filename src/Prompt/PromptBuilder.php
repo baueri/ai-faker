@@ -6,9 +6,26 @@ namespace Baueri\AIFaker\Prompt;
 
 class PromptBuilder
 {
+    /**
+     * Build a plain-text prompt for the provider.
+     *
+     * Expected output: the model should return ONLY a valid JSON array:
+     * - string mode: ["a","b",...]
+     * - fields mode: [{"field":...}, ...]
+     *
+     * @param array<string, mixed> $state
+     */
     public function build(array $state, bool $isRetry = false): string
     {
         $lines = [];
+
+        if (isset($state['offset']) && is_int($state['offset'])) {
+            $start = $state['offset'] + 1;
+            $end = $state['offset'] + (int)($state['count'] ?? 0);
+            if ($end >= $start) {
+                $lines[] = "Item range: {$start}-{$end}.";
+            }
+        }
 
         $lines[] = $isRetry
             ? "Generate {$state['count']} MORE items for {$state['domain']}."

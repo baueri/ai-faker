@@ -14,12 +14,20 @@ class FakeCursor implements \Iterator
     protected array $buffer = [];
     protected int $generated = 0;
     protected int $position = 0;
-    protected null|array $current = null;
+    protected null|array|string $current = null;
 
     protected PromptBuilder $builder;
     protected ResponseParser $parser;
     protected ResultAggregator $aggregator;
 
+    /**
+     * @param AIProviderInterface  $provider
+     * @param CacheInterface|null $cache
+     * @param array<string, mixed> $state
+     * @param int $total Total number of items to emit.
+     * @param int $batch Batch size when filling the internal buffer.
+     * @param int $maxRetries Maximum attempts used by retry/aggregation logic.
+     */
     public function __construct(
         protected AIProviderInterface $provider,
         protected ?CacheInterface $cache,
@@ -33,6 +41,15 @@ class FakeCursor implements \Iterator
         $this->aggregator = new ResultAggregator($maxRetries);
     }
 
+    /**
+     * Fetch the next generated item.
+     *
+     * If $extraContext is provided, it is merged into the cursor's base context
+     * for this single fetch (and generated immediately, without using the buffer).
+     *
+     * @param array<string, mixed>|callable():array<string, mixed> $extraContext
+     * @return null|array|string
+     */
     public function fetch(array|callable $extraContext = []): null|array|string
     {
         if ($this->generated >= $this->total) {
@@ -81,8 +98,11 @@ class FakeCursor implements \Iterator
 
             $key = md5($prompt);
 
-            if ($this->cache && $cached = $this->cache->get($key)) {
-                return $cached;
+            if ($this->cache) {
+                $cached = $this->cache->get($key);
+                if ($cached !== null) {
+                    return $cached;
+                }
             }
 
             $raw = $this->provider->generate($prompt);
@@ -120,19 +140,24 @@ class FakeCursor implements \Iterator
         }
 
         $count = min($this->batch, $remaining);
+        $offset = $this->generated;
 
-        $data = $this->aggregator->collect($count, function ($missing, $existing) {
+        $data = $this->aggregator->collect($count, function ($missing, $existing) use ($offset) {
 
             $prompt = $this->builder->build([
                 ...$this->state,
                 'count' => $missing,
+                'offset' => $offset,
                 'existing' => $existing,
             ], !empty($existing));
 
             $key = md5($prompt);
 
-            if ($this->cache && $cached = $this->cache->get($key)) {
-                return $cached;
+            if ($this->cache) {
+                $cached = $this->cache->get($key);
+                if ($cached !== null) {
+                    return $cached;
+                }
             }
 
             $raw = $this->provider->generate($prompt);
@@ -153,6 +178,9 @@ class FakeCursor implements \Iterator
         $this->buffer = $data;
     }
 
+    /**
+     * Zero-based index of the most recently generated item.
+     */
     public function index(): int
     {
         return max(0, $this->generated - 1);
@@ -171,6 +199,9 @@ class FakeCursor implements \Iterator
         $this->current = $this->fetch();
     }
 
+    /**
+     * @return null|array|string
+     */
     public function current(): null|array|string
     {
         return $this->current;

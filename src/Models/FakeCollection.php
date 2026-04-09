@@ -12,6 +12,9 @@ class FakeCollection implements \IteratorAggregate, \Countable
 {
     protected array $items = [];
 
+    /**
+     * @param list<mixed> $data
+     */
     public function __construct(array $data)
     {
         foreach ($data as $item) {
@@ -20,18 +23,29 @@ class FakeCollection implements \IteratorAggregate, \Countable
     }
 
 
+    /**
+     * @return \Traversable<int, mixed>
+     */
     public function getIterator(): \Traversable
     {
         return new \ArrayIterator($this->items);
     }
 
+    /**
+     * @return int
+     */
     public function count(): int
     {
         return count($this->items);
     }
 
+    /**
+     * Return items as a plain PHP array.
+     *
+     * @return list<mixed>
+     */
     public function toArray(): array
     {
-        return array_map(fn(array $i) => $i, $this->items);
+        return $this->items;
     }
 }

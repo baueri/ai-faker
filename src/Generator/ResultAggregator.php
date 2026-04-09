@@ -6,14 +6,29 @@ namespace Baueri\AIFaker\Generator;
 
 class ResultAggregator
 {
+    /**
+     * @param int $maxRetries Maximum number of attempts (including retries).
+     */
     public function __construct(protected int $maxRetries = 3) {}
 
+    /**
+     * Collect up to $target unique items from repeated generator calls.
+     *
+     * The generator is called with ($missing, $existing) and should return an array
+     * of items (strings or arrays). Items are merged with basic deduplication.
+     *
+     * @param int $target
+     * @param callable(int, array): array $generator
+     * @return array
+     */
     public function collect(int $target, callable $generator): array
     {
         $results = [];
-        $retries = 0;
+        $attempts = 0;
+        $noProgress = 0;
 
-        while (count($results) < $target && $retries < $this->maxRetries) {
+        while (count($results) < $target && $attempts < $this->maxRetries) {
+            $attempts++;
 
             $missing = $target - count($results);
             $new = $generator($missing, $results);
@@ -22,9 +37,16 @@ class ResultAggregator
             $results = $this->merge($results, $new);
             $after = count($results);
 
-            if ($after <= $before) break;
+            if ($after <= $before) {
+                $noProgress++;
+                if ($noProgress >= 2) {
+                    break;
+                }
 
-            $retries++;
+                continue;
+            }
+
+            $noProgress = 0;
         }
 
         return array_slice($results, 0, $target);

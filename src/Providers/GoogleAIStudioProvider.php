@@ -10,12 +10,22 @@ class GoogleAIStudioProvider implements AIProviderInterface
 {
     private const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
+    /**
+     * @param string $apiKey Google AI Studio (Gemini) API key.
+     * @param string $model Model name, e.g. "gemini-flash-latest".
+     * @param int $timeout Request timeout in seconds.
+     */
     public function __construct(
         protected string $apiKey,
         protected string $model = 'gemini-flash-latest',
         protected int $timeout = 30
     ) {}
 
+    /**
+     * Send prompt to Google AI Studio and return the output text.
+     *
+     * @throws \Exception
+     */
     public function generate(string $prompt): string
     {
         $url = sprintf('%s/%s:generateContent', self::BASE_URL, $this->model);

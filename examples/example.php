@@ -44,6 +44,13 @@ $data = $fake->for('school names')
     ->batch(5)
     ->generate(); // this will fetch data from the api twice, each times gets 5-5 items
 
+/** Disable cache for a single immutable chain */
+
+$a = $fake->for('book title')->count(3)->generate(); // may be served from cache
+$b = $fake->for('book title')->withoutCache()->count(3)->generate(); // always bypass cache
+
+var_dump($a->toArray(), $b->toArray()); echo PHP_EOL;
+
 /** Full example  */
 
 $data = $fake->for('movie')

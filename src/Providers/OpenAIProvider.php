@@ -8,6 +8,11 @@ use Baueri\AIFaker\Contracts\AIProviderInterface;
 
 class OpenAIProvider implements AIProviderInterface
 {
+    /**
+     * @param string $apiKey OpenAI API key.
+     * @param string $model Responses API model name.
+     * @param int $timeout Request timeout in seconds.
+     */
     public function __construct(
         protected string $apiKey,
         protected string $model = 'gpt-4.1-mini',
@@ -17,6 +22,11 @@ class OpenAIProvider implements AIProviderInterface
         $this->model = $model;
     }
 
+    /**
+     * Send prompt to OpenAI Responses API and return the output text.
+     *
+     * @throws \Exception
+     */
     public function generate(string $prompt): string
     {
         $ch = curl_init();
